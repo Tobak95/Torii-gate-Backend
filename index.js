@@ -5,8 +5,11 @@ const mongoose = require("mongoose");
 const PORT = process.env.PORT || 3000;
 const userRouter = require("./routes/userRouter")
 
+
 //middleware
 app.use(express.json());
+
+
 
 //route
 app.get("/", (req, res) => {
