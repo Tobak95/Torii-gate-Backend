@@ -54,13 +54,25 @@ const handleVerifyEmail = async (req, res) => {
   const { token } = req.params;
   try {
     //find the user
+    //1. find the user by the token
     const user = await USER.findOne({
       verificationToken: token,
-      verificationTokenExpires: { $gt: Date.now() },
     });
     if (!user) {
-      return res.status(404).json({ message: "Invalid or expired token", email: user.email });
+      return res.status(404).json({ message: "Invalid verification token" });
+    }
+    //if token is expired
+    if (user.verificationTokenExpires < Date.now()) {
+      return res
+        .status(404)
+        .json({ message: "Verification Token has expired", email: user.email });
     };
+    //check is the user is already verified
+    if (user.isVerified) {
+      return res
+        .status(400)
+        .json({ message: "Email already verified"});
+    }
     // the user as verified
     user.isVerified = true;
     user.verificationToken = undefined;
