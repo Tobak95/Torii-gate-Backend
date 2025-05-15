@@ -4,24 +4,18 @@ const app = express();
 const mongoose = require("mongoose");
 const cors = require("cors");
 const PORT = process.env.PORT || 3000;
-const userRouter = require("./routes/userRouter")
-
-
-
+const userRouter = require("./routes/userRouter");
 
 //middleware
 app.use(express.json());
 app.use(cors());
-
-
 
 //route
 app.get("/", (req, res) => {
   res.status(200).json({ success: false, message: "Torii Gate Server" });
 });
 
-app.use('/api/auth', userRouter)
-
+app.use("/api/auth", userRouter);
 
 //error route
 app.use((req, res) => {
@@ -30,7 +24,7 @@ app.use((req, res) => {
 
 const startServer = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI, {dbName: 'toriigate'});
+    await mongoose.connect(process.env.MONGO_URI, { dbName: "toriigate" });
     app.listen(PORT, () => {
       console.log(`App running on port : ${PORT}`);
     });
