@@ -2,6 +2,7 @@ const USER = require("../models/users");
 const bcrypt = require("bcryptjs");
 const generateToken = require("../helpers/generateToken");
 const { sendWelcomeEmail } = require("../email/sendEmail");
+const jwt = require("jsonwebtoken");
 
 const handleRegister = async (req, res) => {
   //we tend to destructure from userSchema
@@ -66,12 +67,10 @@ const handleVerifyEmail = async (req, res) => {
       return res
         .status(404)
         .json({ message: "Verification Token has expired", email: user.email });
-    };
+    }
     //check is the user is already verified
     if (user.isVerified) {
-      return res
-        .status(400)
-        .json({ message: "Email already verified"});
+      return res.status(400).json({ message: "Email already verified" });
     }
     // the user as verified
     user.isVerified = true;
@@ -88,4 +87,61 @@ const handleVerifyEmail = async (req, res) => {
   }
 };
 
-module.exports = { handleRegister, handleVerifyEmail };
+//handleLogin
+const handleLogin = async (req, res) => {
+  const { email, password, role } = req.body;
+  //this is an input validation..... so the user didnt fill up the required field
+  if (!email || !password || !role) {
+    return res
+      .status(400)
+      .json({ message: "Email, password and role are required" });
+  }
+  try {
+    const user = await USER.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ message: "Account not found, Register" });
+    }
+    //error 403 means forbidden
+    if (user.role !== role) {
+      return res.status(403).json({ message: "Access Denied fot this role" });
+    }
+    if (!user.isVerified) {
+      return res
+        .status(403)
+        .json({ message: "Email not verified, Check your email" });
+    }
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+    if (!isPasswordCorrect) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    //generate token  (validity, period) jwt would be used for authorization,
+    //payload means the unique identification of the user
+    //jsonwebtoken is used to sign the token, and its would be installed in the terminal as npm i jasonwebtoken
+
+    const token = jwt.sign(
+      { email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "3 days",
+      }
+    );
+
+    return res.status(200).json({
+      token,
+      message: "Login successful",
+      success: true,
+      user: {
+        fullName: user.fullName,
+        email: user.email,
+        profilePicture: user.profilePicture,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { handleRegister, handleVerifyEmail, handleLogin };
