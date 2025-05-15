@@ -34,7 +34,7 @@ const handleRegister = async (req, res) => {
     });
 
     //sending an email - this comes after the user is created and we need to construct the client Url
-    const clientUrl = `${process.env.FRONTEND_URL}/verify-email/ ${verificationToken}`;
+    const clientUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
     await sendWelcomeEmail({
       email: user.email,
       fullName: user.fullName,
