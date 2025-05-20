@@ -144,4 +144,72 @@ const handleLogin = async (req, res) => {
   }
 };
 
-module.exports = { handleRegister, handleVerifyEmail, handleLogin };
+const resendVerificationEmail = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
+
+  try {
+    const user = await USER.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+    if (user.isVerified) {
+      return res.status(400).json({ message: "Email is already verified" });
+    }
+    //generate token again
+    const newToken = generateToken();
+    const tokenExpires = Date.now() + 24 * 60 * 60 * 1000;
+
+    user.verificationToken = newToken;
+    user.verificationTokenExpires = tokenExpires;
+    await user.save();
+    //Send an email
+    const clientUrl = `${process.env.FRONTEND_URL}/verify-email/${newToken}`;
+    await sendWelcomeEmail({
+      email: user.email,
+      fullName: user.fullName,
+      clientUrl,
+    });
+
+    return res
+      .status(201)
+      .json({ success: true, message: "Verification Email sent" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const handleForgotPassword = async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
+  try {
+    const user = await USER.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    user.resetPasswordToken = generateToken()
+    user.resetPasswordExpires = Date.now() + 60 * 60 * 1000 //1 hr
+    await user.save()
+
+    //send the mail
+
+    res.status(200).json({success: true, message: 'Password resent link is sent to your email'})
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = {
+  handleRegister,
+  handleVerifyEmail,
+  handleLogin,
+  resendVerificationEmail,
+  handleForgotPassword,
+};
