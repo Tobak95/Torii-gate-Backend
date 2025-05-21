@@ -1,7 +1,7 @@
 const USER = require("../models/users");
 const bcrypt = require("bcryptjs");
 const generateToken = require("../helpers/generateToken");
-const { sendWelcomeEmail } = require("../email/sendEmail");
+const { sendWelcomeEmail, sendResetEmail } = require("../email/sendEmail");
 const jwt = require("jsonwebtoken");
 
 const handleRegister = async (req, res) => {
@@ -90,7 +90,7 @@ const handleVerifyEmail = async (req, res) => {
 //handleLogin
 const handleLogin = async (req, res) => {
   const { email, password, role } = req.body;
-  //this is an input validation..... so the user didnt fill up the required field
+  //this is an input validation..... so the user didn't fill up the required field
   if (!email || !password || !role) {
     return res
       .status(400)
@@ -117,7 +117,7 @@ const handleLogin = async (req, res) => {
 
     //generate token  (validity, period) jwt would be used for authorization,
     //payload means the unique identification of the user
-    //jsonwebtoken is used to sign the token, and its would be installed in the terminal as npm i jasonwebtoken
+    //jsonwebtoken is used to sign the token, and its would be installed in the terminal as npm i jason web token
 
     const token = jwt.sign(
       { email: user.email, role: user.role },
@@ -186,25 +186,69 @@ const resendVerificationEmail = async (req, res) => {
 const handleForgotPassword = async (req, res) => {
   const { email } = req.body;
   if (!email) {
-    return res.status(400).json({ message: "Email is required" });
+  return res.status(400).json({ message: "Email is required" });
+  }
+  
+  try {
+  const user = await USER.findOne({ email });
+  if (!user) {
+  return res.status(404).json({ message: "User not found" });
+  }
+  const token = generateToken();
+  user.resetPasswordToken = token;
+  user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1hr
+  await user.save();
+  
+  //send the mail
+  const clientUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+  await sendResetEmail({
+  fullName: user.fullName,
+  email: user.email,
+  clientUrl,
+  });
+  
+  res.status(200).json({
+  success: true,
+  token,
+  message: "Password reset link sent to your mail",
+  });
+  } catch (error) {
+  console.error(error);
+  res.status(500).json({ message: error.message });
+  }
+  };
+  
+  const handleResetPassword = async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password) {
+  return res.status(400), json({ message: "Provide token and new password" });
   }
   try {
-    const user = await USER.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    user.resetPasswordToken = generateToken()
-    user.resetPasswordExpires = Date.now() + 60 * 60 * 1000 //1 hr
-    await user.save()
-
-    //send the mail
-
-    res.status(200).json({success: true, message: 'Password resent link is sent to your email'})
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: error.message });
+  const user = await USER.findOne({
+  resetPasswordToken: token,
+  resetPasswordExpires: { $gt: Date.now() },
+  });
+  if (!user) {
+  return res
+  .status(404)
+  .json({ message: "Invalid or expired link, try again" });
   }
-};
+  const salt = await bcrypt.genSalt();
+  const hashedPassword = await bcrypt.hash(password, salt);
+  
+  user.password = hashedPassword;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpires = undefined;
+  
+  await user.save();
+  res
+  .status(200)
+  .json({ success: true, message: "Password reset successfully" });
+  } catch (error) {
+  console.error(error);
+  res.status(500).json({ message: error.message });
+  }
+  };
 
 module.exports = {
   handleRegister,
@@ -212,4 +256,5 @@ module.exports = {
   handleLogin,
   resendVerificationEmail,
   handleForgotPassword,
+  handleResetPassword,
 };

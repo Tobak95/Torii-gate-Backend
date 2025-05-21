@@ -2,7 +2,7 @@ const nodemailer = require("nodemailer");
 
 const {
   createWelcomeTemplates,
-  createResetTempate,
+  createResetTemplate,
 } = require("./emailTemplates");
 
 const sendMail = async ({ to, subject, html }) => {
@@ -32,5 +32,10 @@ const sendWelcomeEmail = ({ fullName, clientUrl, email }) => {
   const html = createWelcomeTemplates(fullName, clientUrl);
   sendMail({ to: email, subject, html });
 };
+const sendResetEmail = ({ fullName, clientUrl, email }) => {
+  const subject = "Password Reset Request";
+  const html = createResetTemplate(fullName, clientUrl);
+  sendMail({ to: email, subject, html });
+};
 
-module.exports = { sendWelcomeEmail };
+module.exports = { sendWelcomeEmail, sendResetEmail };
