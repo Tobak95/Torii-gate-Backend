@@ -19,12 +19,12 @@ router.post("/login", handleLogin);
 router.post("/resend-email", resendVerificationEmail);
 router.post("/forgot-password", handleForgotPassword);
 router.post("/reset-password", handleResetPassword);
-router.get("/user", handleGetUser);
+router.get("/user", isLoggedIn, handleGetUser);
 //this route is protected, only the landlord can access this route
 router.patch(
   "/user",
   isLoggedIn,
-  requirePermission(["landlord"]),
+  requirePermission("landlord"),
   handleUpdateUser
 );
 

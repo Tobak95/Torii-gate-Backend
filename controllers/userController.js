@@ -103,7 +103,7 @@ const handleLogin = async (req, res) => {
     }
     //error 403 means forbidden
     if (user.role !== role) {
-      return res.status(403).json({ message: "Access Denied fot this role" });
+      return res.status(403).json({ message: "Access Denied for this role" });
     }
     if (!user.isVerified) {
       return res
@@ -120,7 +120,7 @@ const handleLogin = async (req, res) => {
     //jsonwebtoken is used to sign the token, and its would be installed in the terminal as npm i jason web token
 
     const token = jwt.sign(
-      { email: user.email, role: user.role, id: user._id },
+      { email: user.email, role: user.role, userId: user._id },
       process.env.JWT_SECRET,
       {
         expiresIn: "3 days",
@@ -187,84 +187,119 @@ const resendVerificationEmail = async (req, res) => {
 const handleForgotPassword = async (req, res) => {
   const { email } = req.body;
   if (!email) {
-  return res.status(400).json({ message: "Email is required" });
+    return res.status(400).json({ message: "Email is required" });
   }
-  
+
   try {
-  const user = await USER.findOne({ email });
-  if (!user) {
-  return res.status(404).json({ message: "User not found" });
-  }
-  const token = generateToken();
-  user.resetPasswordToken = token;
-  user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1hr
-  await user.save();
-  
-  //send the mail
-  const clientUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`;
-  await sendResetEmail({
-  fullName: user.fullName,
-  email: user.email,
-  clientUrl,
-  });
-  
-  res.status(200).json({
-  success: true,
-  token,
-  message: "Password reset link sent to your mail",
-  });
+    const user = await USER.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const token = generateToken();
+    user.resetPasswordToken = token;
+    user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1hr
+    await user.save();
+
+    //send the mail
+    const clientUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+    await sendResetEmail({
+      fullName: user.fullName,
+      email: user.email,
+      clientUrl,
+    });
+
+    res.status(200).json({
+      success: true,
+      token,
+      message: "Password reset link sent to your mail",
+    });
   } catch (error) {
-  console.error(error);
-  res.status(500).json({ message: error.message });
+    console.error(error);
+    res.status(500).json({ message: error.message });
   }
-  };
-  
-  const handleResetPassword = async (req, res) => {
+};
+
+const handleResetPassword = async (req, res) => {
   const { token, password } = req.body;
   if (!token || !password) {
-  return res.status(400), json({ message: "Provide token and new password" });
+    return res.status(400), json({ message: "Provide token and new password" });
   }
   try {
-  const user = await USER.findOne({
-  resetPasswordToken: token,
-  resetPasswordExpires: { $gt: Date.now() },
-  });
-  if (!user) {
-  return res
-  .status(404)
-  .json({ message: "Invalid or expired link, try again" });
-  }
-  const salt = await bcrypt.genSalt();
-  const hashedPassword = await bcrypt.hash(password, salt);
-  
-  user.password = hashedPassword;
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpires = undefined;
-  
-  await user.save();
-  res
-  .status(200)
-  .json({ success: true, message: "Password reset successfully" });
+    const user = await USER.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ message: "Invalid or expired link, try again" });
+    }
+    const salt = await bcrypt.genSalt();
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+
+    await user.save();
+    res
+      .status(200)
+      .json({ success: true, message: "Password reset successfully" });
   } catch (error) {
-  console.error(error);
-  res.status(500).json({ message: error.message });
+    console.error(error);
+    res.status(500).json({ message: error.message });
   }
-  };
+};
 
 //before we update the user, we need to get the user information from the database
 //and then we can update the user
 
 const handleGetUser = async (req, res) => {
-  res.send("get User");
-}
+  const { userId } = req.user
+  try {
+    const user = await USER.findById(userId)
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json({success: true, user})
+    
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+    
+  }
+};
 
+const handleUpdateUser = async (req, res) => {
+  const { fullName, phoneNumber } = req.body;
+  //we need to get the userId from the token
+  const { userId } = req.user;
 
-  const handleUpdateUser = async (req, res) => {
-    res.send("change User");
+  if (!fullName || !phoneNumber) {
+    return res
+      .status(400)
+      .json({ message: "Full Name and Phone Number are required" });
   }
 
-
-
+  try {
+    const user = await USER.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    // if the user is found, we can update the user
+    user.fullName = fullName;
+    user.phoneNumber = phoneNumber;
+    await user.save();
+    res.status(200).json({
+      success: true,
+      message: "User updated successfully", user
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+  res.send("change User");
+};
 
 module.exports = {
   handleRegister,
@@ -275,5 +310,4 @@ module.exports = {
   handleResetPassword,
   handleUpdateUser,
   handleGetUser,
-
 };

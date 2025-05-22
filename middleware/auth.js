@@ -32,7 +32,7 @@ const isLoggedIn = (req, res, next) => {
 
 const requirePermission = (...roles) => {
   return (req, res, next) => {
-    if (!roles(req.user.role)) {
+    if (!roles.includes(req.user.role)) {
       return res
         .status(403)
         .json({ message: "Unauthorized to assess this route" });
