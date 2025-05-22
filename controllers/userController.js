@@ -120,7 +120,7 @@ const handleLogin = async (req, res) => {
     //jsonwebtoken is used to sign the token, and its would be installed in the terminal as npm i jason web token
 
     const token = jwt.sign(
-      { email: user.email, role: user.role },
+      { email: user.email, role: user.role, id: user._id },
       process.env.JWT_SECRET,
       {
         expiresIn: "3 days",
@@ -136,6 +136,7 @@ const handleLogin = async (req, res) => {
         email: user.email,
         profilePicture: user.profilePicture,
         role: user.role,
+        phoneNumber: user.phoneNumber,
       },
     });
   } catch (error) {
@@ -250,6 +251,21 @@ const handleForgotPassword = async (req, res) => {
   }
   };
 
+//before we update the user, we need to get the user information from the database
+//and then we can update the user
+
+const handleGetUser = async (req, res) => {
+  res.send("get User");
+}
+
+
+  const handleUpdateUser = async (req, res) => {
+    res.send("change User");
+  }
+
+
+
+
 module.exports = {
   handleRegister,
   handleVerifyEmail,
@@ -257,4 +273,7 @@ module.exports = {
   resendVerificationEmail,
   handleForgotPassword,
   handleResetPassword,
+  handleUpdateUser,
+  handleGetUser,
+
 };
