@@ -12,7 +12,7 @@ app.use(cors());
 
 //route
 app.get("/", (req, res) => {
-  res.status(200).json({ success: false, message: "Torii Gate Server" });
+  res.status(200).json({ success: True, message: "Torii Gate Server" });
 });
 
 app.use("/api/auth", userRouter);
