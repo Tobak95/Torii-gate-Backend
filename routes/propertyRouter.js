@@ -5,6 +5,7 @@ const {
   UpdatePropertyAvailability,
   getAllProperties,
   getAProperty,
+  deleteProperty,
 } = require("../controllers/propertyController");
 
 // firstly, after  importing the data form controller, we need to imported from the auth middleware
@@ -24,6 +25,12 @@ router.patch(
   isLoggedIn,
   requirePermission("landlord"),
   UpdatePropertyAvailability
+);
+router.delete(
+  "/landlord/:propertyId",
+  isLoggedIn,
+  requirePermission("landlord"),
+  deleteProperty
 );
 
 router.get("/", isLoggedIn, getAllProperties);
